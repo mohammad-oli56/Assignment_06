@@ -1,0 +1,26 @@
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(CUSTOMER)
+  phone     String?
+  isActive  Boolean  @default(true)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  technician      Technician?
+  schedules       Schedule[]
+  reportedOutages Outage[]
+  serviceRequests ServiceRequest[]
+  payments        Payment[]
+  notifications   Notification[]
+
+  @@index([role])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("users")
+}

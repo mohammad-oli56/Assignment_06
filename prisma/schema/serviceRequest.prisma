@@ -1,0 +1,25 @@
+model ServiceRequest {
+  id          String               @id @default(uuid())
+  userId      String
+  zoneId      String
+
+  type        String
+  description String?
+  amount      Decimal              @db.Decimal(10, 2)
+  status      ServiceRequestStatus @default(PENDING)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id])
+  zone    Zone    @relation(fields: [zoneId], references: [id])
+  payment Payment?
+
+  @@index([userId])
+  @@index([zoneId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("service_requests")
+}

@@ -1,0 +1,22 @@
+model Payment {
+  id               String        @id @default(uuid())
+  userId           String
+  serviceRequestId String        @unique
+
+  transactionId    String        @unique
+  provider         String        @default("STRIPE")
+  amount           Decimal       @db.Decimal(10, 2)
+  status           PaymentStatus @default(PENDING)
+
+  paidAt           DateTime?
+  createdAt        DateTime      @default(now())
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id])
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payments")
+}

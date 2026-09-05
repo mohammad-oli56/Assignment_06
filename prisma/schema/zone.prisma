@@ -1,0 +1,23 @@
+model Zone {
+  id         String   @id @default(uuid())
+  name       String
+  code       String   @unique
+
+  substation String?
+  feeder     String?
+  area       String?
+  location   String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  // Relations
+  schedules       Schedule[]
+  outages         Outage[]
+  serviceRequests ServiceRequest[]
+
+  @@index([name])
+  @@index([deletedAt])
+  @@map("zones")
+}

@@ -1,0 +1,26 @@
+model Schedule {
+  id        String         @id @default(uuid())
+  zoneId    String
+  createdBy String
+
+  startTime DateTime
+  endTime   DateTime
+  status    ScheduleStatus @default(SCHEDULED)
+  reason    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  zone    Zone @relation(fields: [zoneId], references: [id])
+  creator User @relation(fields: [createdBy], references: [id])
+
+  notifications Notification[]
+
+  @@index([zoneId])
+  @@index([startTime, endTime])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("schedules")
+}

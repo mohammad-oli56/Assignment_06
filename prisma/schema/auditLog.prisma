@@ -1,0 +1,15 @@
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+
+  action     String
+  entityType String
+  entityId   String
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
