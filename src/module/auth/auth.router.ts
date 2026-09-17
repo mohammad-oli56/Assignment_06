@@ -9,17 +9,11 @@ const router = Router()
 
 router.post("/register",validateRequest(UserValidation.userRegistrationZodSchema),AuthController.registeruser)
 router.post("/login",validateRequest(UserValidation.LoginZodSchema),AuthController.loginUser)
-router.get(
-  "/me",
-  auth(
-    UserRole.ADMIN,
-    UserRole.POWER_OPERATOR,
-    UserRole.TECHNICIAN,
-    UserRole.CUSTOMER
-  ),
-  AuthController.getMe
-)
+router.get("/me",auth(UserRole.ADMIN,UserRole.POWER_OPERATOR,UserRole.TECHNICIAN,UserRole.CUSTOMER),AuthController.getMe)
 router.post("/refreshToken",AuthController.refreshToken)
 router.post("/google",AuthController.googlelogin)
+
+router.post("/forgot_password",AuthController.forgotpassword)
+router.post("/reset-password",AuthController.resetpassword)
 
 export const authRouts =router

@@ -17,4 +17,11 @@ export default {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID!,
     ADMIN_EMAIL:process.env.ADMIN_EMAIL,
      ADMIN_PASS:process.env.ADMIN_PASS,
+     REDIS_USER:process.env.REDIS_USER!,
+     REDIS_PASSWORD:process.env.REDIS_PASSWORD!,
+     REDIS_HOST:process.env.REDIS_HOST!,
+     REDIS_PORT:process.env.REDIS_PORT!,
+     SMTP_USER:process.env.SMTP_USER!,
+     GMAIL_PASSWORD:process.env.GMAIL_PASSWORD!,
+     
 };

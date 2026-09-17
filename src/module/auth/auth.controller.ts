@@ -143,10 +143,43 @@ const googlelogin = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
+
+const forgotpassword = catchAsync(async (req: Request, res: Response) => {
+    const payload = req.body
+     await AuthService.forgotPassword(payload)
+   
+
+
+    sendResponse(res, {
+        statusCode:200,
+        success: true,
+        message: 'otp send ',
+        data: null
+    })
+})
+
+
+
+const resetpassword = catchAsync(async (req: Request, res: Response) => {
+    const payload = req.body
+     await AuthService.resetPassword(payload)
+   
+
+
+    sendResponse(res, {
+        statusCode:200,
+        success: true,
+        message: 'password change successfully',
+        data: null
+    })
+})
+
 export const AuthController = {
     registeruser,
     loginUser,
     getMe,
     refreshToken,
-    googlelogin
+    googlelogin,
+    forgotpassword,
+    resetpassword
 }

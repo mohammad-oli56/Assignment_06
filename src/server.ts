@@ -1,6 +1,8 @@
 import app from "./app"
 import config from "./config"
+import { transporter } from "./lib/nodemailer"
 import { prisma } from "./lib/prisma"
+import { Redisclient } from "./lib/redis"
 import { createAdmin } from "./utils/createAdmin"
 
 async function main() {
@@ -8,6 +10,13 @@ async function main() {
         
         await prisma.$connect()
         console.log("prisma connect successfully") 
+        await Redisclient.connect()
+        console.log("redis connect successfully")
+        
+
+        await transporter.verify()
+        console.log("nodemalier connect")
+
 
         await createAdmin()
 
