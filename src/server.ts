@@ -1,12 +1,15 @@
 import app from "./app"
 import config from "./config"
 import { prisma } from "./lib/prisma"
+import { createAdmin } from "./utils/createAdmin"
 
 async function main() {
     try {
         
         await prisma.$connect()
         console.log("prisma connect successfully") 
+
+        await createAdmin()
 
         app.listen(config.PORT,()=>{
             console.log(`server is runngin PORT ${config.PORT}`)
