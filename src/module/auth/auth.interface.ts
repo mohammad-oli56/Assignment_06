@@ -8,6 +8,13 @@ export interface IRegisterUserPayload {
 }
 
 
+export interface IverifyUserPayload {
+
+  email: string
+  otp:string
+}
+
+
 export interface ILoginUserPayload {
      email: string
   password: string

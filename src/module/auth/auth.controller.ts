@@ -6,7 +6,44 @@ import { IRequestUser } from "./auth.interface";
 
 const registeruser = catchAsync(async (req: Request, res: Response) =>{
       const payload = req.body
+
+    //   console.log(payload)
     const result = await AuthService.registerUser(payload)
+
+
+    // const { accessToken, refreshToken, createdUser} = result
+
+    // res.cookie("accessToken", accessToken, {
+    //     httpOnly: true,
+    //     secure: false,
+    //     sameSite: "none",
+    //     maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
+    // })
+    // res.cookie("refreshToken", refreshToken, {
+    //     httpOnly: true,
+    //     secure: false,
+    //     sameSite: "none",
+    //     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    // })
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: 'user registered successfully',
+        data:null
+        //  {
+        //     accessToken,
+        //     refreshToken,
+        //    createdUser
+        // },
+    })
+})
+
+const verifyuseraccout = catchAsync(async (req: Request, res: Response) =>{
+    const payload = req.body
+
+    const result = await AuthService.verifyuseraccout(payload)
+
 
     const { accessToken, refreshToken, createdUser} = result
 
@@ -27,7 +64,8 @@ const registeruser = catchAsync(async (req: Request, res: Response) =>{
         statusCode: 200,
         success: true,
         message: 'user registered successfully',
-        data: {
+        data:
+         {
             accessToken,
             refreshToken,
            createdUser
@@ -181,5 +219,6 @@ export const AuthController = {
     refreshToken,
     googlelogin,
     forgotpassword,
-    resetpassword
+    resetpassword,
+    verifyuseraccout
 }

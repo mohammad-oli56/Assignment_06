@@ -8,6 +8,7 @@ import { validateRequest } from "../../middleware/validateRequest";
 const router = Router()
 
 router.post("/register",validateRequest(UserValidation.userRegistrationZodSchema),AuthController.registeruser)
+router.post("/verify-email",AuthController.verifyuseraccout)
 router.post("/login",validateRequest(UserValidation.LoginZodSchema),AuthController.loginUser)
 router.get("/me",auth(UserRole.ADMIN,UserRole.POWER_OPERATOR,UserRole.TECHNICIAN,UserRole.CUSTOMER),AuthController.getMe)
 router.post("/refreshToken",AuthController.refreshToken)

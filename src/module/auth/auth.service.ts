@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs"
 import { JwtPayload, SignOptions } from 'jsonwebtoken'
 import { jwtUtils } from "../../utils/jwt"
 import { prisma } from "../../lib/prisma"
-import { IForgotpassword, IGoogle, ILoginUserPayload, IRegisterUserPayload, IRequestUser, IResetpassword } from "./auth.interface"
+import { IForgotpassword, IGoogle, ILoginUserPayload, IRegisterUserPayload, IRequestUser, IResetpassword, IverifyUserPayload } from "./auth.interface"
 import config from "../../config"
 import { authProvider, UserRole, UserStatus } from "../../../generated/prisma/enums"
 import { OAuth2Client, TokenPayload } from "google-auth-library"
@@ -33,47 +33,144 @@ const registerUser = async (payload: IRegisterUserPayload) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, Number(config.BCRYPT_SALT_ROUNDS));
 
+
+
+
+    const otp = crypto.randomInt(100000, 1000000);
+    const otpkey = `user-register-otp:${email}`;
+
+    // Save OTP for 5 minutes
+    await Redisclient.set(otpkey, otp, {
+        expiration: {
+            type: "EX",
+            value: 5 * 60,
+        },
+    });
+
+
+
+    const userdatakey = `user-register-data:${email}`;
+    const redisUserData = {
+        name,
+        email,
+        password: hashedPassword,
+        phone
+    }
+
+    await Redisclient.set(userdatakey, JSON.stringify(redisUserData), {
+        expiration: {
+            type: "EX",
+            value: 5 * 60,
+        },
+    })
+
+    const templatePath = path.join(
+        process.cwd(),
+        "src",
+        "templates",
+        "emails",
+        "verify-email.html"
+    );
+
+    let html = fs.readFileSync(templatePath, "utf-8");
+
+    html = html.replace("{{name}}", name || "User");
+    html = html.replace("{{otp}}", String(otp));
+
+    await transporter.sendMail({
+        from: config.SMTP_USER,
+        to: email,
+        subject: "Verify Your Email",
+        html,
+    });
+
+
+
+}
+
+const verifyuseraccout = async (payload: IverifyUserPayload) => {
+    const otp = payload.otp;
+    const email = payload.email.trim().toLowerCase();
+
+    // Check existing user
+    const isUserExists = await prisma.user.findUnique({
+        where: { email },
+    });
+
+    if (isUserExists && isUserExists.emailVerified === true) {
+        throw new Error("User with this email is already verified");
+    }
+
+    // Get OTP
+    const otpKey = `user-register-otp:${email}`;
+    const redisOTP = await Redisclient.get(otpKey);
+
+    if (!redisOTP) {
+        throw new Error("OTP not found or expired");
+    }
+
+    if (String(redisOTP) !== String(otp)) {
+        throw new Error("OTP does not match");
+    }
+
+    // Get user data
+    const userDataKey = `user-register-data:${email}`;
+    const redisData = await Redisclient.get(userDataKey);
+
+    if (!redisData) {
+        throw new Error("User registration data not found or expired");
+    }
+
+    const userData = JSON.parse(redisData);
+
     // Create user
     const createdUser = await prisma.user.create({
         data: {
-            name,
-            email,
-            password: hashedPassword,
-            phone,
+            name: userData.name,
+            email: userData.email,
+            password: userData.password,
+            phone: userData.phone,
             role: "CUSTOMER",
+            emailVerified: true,
         },
-        omit: { password: true },
-    })
+        omit: {
+            password: true,
+        },
+    });
 
-    // Create JWT payload
-    const JwtPayload = {
+    // JWT payload
+    const jwtPayload = {
         userId: createdUser.id,
         name: createdUser.name,
         email: createdUser.email,
         role: createdUser.role,
-    }
+    };
 
-    // Create access token
+    // Access token
     const accessToken = jwtUtils.createToken(
-        JwtPayload,
+        jwtPayload,
         config.JWT_ACCESS_SECRET,
         config.JWT_EXPIRES_IN as SignOptions
-    )
+    );
 
+    // Refresh token
     const refreshToken = jwtUtils.createToken(
-        JwtPayload,
+        jwtPayload,
         config.jwt_refresh_secret,
         config.jwt_refresh_expires_in as SignOptions
     );
 
-
+    // Delete OTP and temporary user data
+    await Redisclient.del(otpKey);
+    await Redisclient.del(userDataKey);
 
     return {
         createdUser,
         accessToken,
-        refreshToken
-    }
-}
+        refreshToken,
+    };
+};
+
 
 const loginUser = async (payload: ILoginUserPayload) => {
     const { password } = payload
@@ -470,7 +567,7 @@ const resetPassword = async (payload: IResetpassword) => {
         "password-changed.html"
     );
 
-      let html = fs.readFileSync(templatePath, "utf-8");
+    let html = fs.readFileSync(templatePath, "utf-8");
 
     // Replace template variables
     html = html.replace(
@@ -478,14 +575,14 @@ const resetPassword = async (payload: IResetpassword) => {
         isUserExit.name || "User"
     );
 
-   
 
-   await transporter.sendMail({
-    from: config.SMTP_USER,
-    to: isUserExit.email,
-    subject: "Your Password Has Been Changed",
-    html,
-});
+
+    await transporter.sendMail({
+        from: config.SMTP_USER,
+        to: isUserExit.email,
+        subject: "Your Password Has Been Changed",
+        html,
+    });
 }
 
 
@@ -496,5 +593,6 @@ export const AuthService = {
     refreshToken,
     googlelogin,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    verifyuseraccout
 }
