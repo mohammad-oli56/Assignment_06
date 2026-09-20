@@ -15,20 +15,27 @@ router.post(
 )
 
 
-// Customer views a specific outage
-// router.get(
-//   "/:id",
-//   auth(UserRole.CUSTOMER),
-//   CustomerOutageController.getSingleOutage
-// )
+router.get(
+  "/",
+  auth(UserRole.CUSTOMER),
+  CustomerOutageController.getAll_myOutage
+)
 
 
-// // Customer cancels own outage
-// router.post(
-//   "/:id/cancel",
-//   auth(UserRole.CUSTOMER),
-//   CustomerOutageController.cancelOutage
-// )
+
+router.get(
+  "/:id",
+  auth(UserRole.CUSTOMER),
+  CustomerOutageController.getSingleOutage
+)
+
+
+// Customer cancels own outage
+router.post(
+  "/:id/cancel",
+  auth(UserRole.CUSTOMER),
+  CustomerOutageController.cancelOutage
+)
 
 
 export const custometOutageRouter = router

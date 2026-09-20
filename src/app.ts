@@ -4,6 +4,7 @@ import config from './config';
 import cookieParser from 'cookie-parser';
 import { authRouts } from './module/auth/auth.router';
 import { ZoneRouter } from './module/POWER_OPERATOR/Zone/zone.router';
+import { custometOutageRouter } from './module/customer/Outage/outage.router';
 
 const app :Application = express()
 
@@ -22,6 +23,11 @@ app.get("/",(req : Request,res : Response)=>{
 })
 
 app.use("/api/v1/auth",authRouts)
+
+
+
+//customer 
+app.use("/api/v1/customer/outages",custometOutageRouter)
 
 
 

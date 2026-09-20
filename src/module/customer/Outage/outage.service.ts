@@ -8,6 +8,9 @@ const createOutage = async (
 ) => {
   const { zoneId, title, description, priority } = payload
 
+
+
+
   // Check zone
   const zone = await prisma.zone.findFirst({
     where: {
@@ -54,9 +57,15 @@ const createOutage = async (
 }
 
 const getSingleOutage = async (
+
+  outageId: string,
   userId: string,
-  outageId: string
 ) => {
+
+  // console.log("outage id",outageId)
+
+
+
   const outage = await prisma.outage.findFirst({
     where: {
       id: outageId,
@@ -86,9 +95,45 @@ const getSingleOutage = async (
   return outage
 }
 
-const cancelOutage = async (
+const getall_myOutage = async (
+
   userId: string,
-  outageId: string
+) => {
+
+// console.log(userId)
+  const outage = await prisma.outage.findMany({
+    where: {
+      
+      reportedBy: userId,
+      deletedAt: null,
+    },
+    include: {
+      zone: true,
+      technician: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!outage) {
+    throw new Error("Outage not found")
+  }
+
+  return outage
+}
+
+const cancelOutage = async (
+  
+  outageId: string,
+  userId: string,
 ) => {
   const outage = await prisma.outage.findFirst({
     where: {
@@ -144,4 +189,5 @@ export const customerOutageService = {
   createOutage,
   getSingleOutage,
   cancelOutage,
+  getall_myOutage
 }

@@ -5,7 +5,7 @@ model Schedule {
 
   startTime DateTime
   endTime   DateTime
-  status    ScheduleStatus @default(SCHEDULED)
+  status    ScheduleStatus @default(SCHEDULED) 
   reason    String?
 
   createdAt DateTime @default(now())

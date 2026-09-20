@@ -12,7 +12,7 @@ enum TechnicianStatus {
 }
 
 enum ScheduleStatus {
-  SCHEDULED
+  SCHEDULED 
   ACTIVE
   COMPLETED
   CANCELLED
