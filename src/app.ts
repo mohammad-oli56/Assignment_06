@@ -3,6 +3,7 @@ import cors from 'cors'
 import config from './config';
 import cookieParser from 'cookie-parser';
 import { authRouts } from './module/auth/auth.router';
+import { ZoneRouter } from './module/POWER_OPERATOR/Zone/zone.router';
 
 const app :Application = express()
 
@@ -21,6 +22,12 @@ app.get("/",(req : Request,res : Response)=>{
 })
 
 app.use("/api/v1/auth",authRouts)
+
+
+
+
+//power operator
+app.use("/api/v1",ZoneRouter)
 
 
 export default app;
