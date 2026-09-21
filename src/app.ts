@@ -41,6 +41,7 @@ app.use("/api/v1/service-requests",ServiceRequestRouter)
 app.use("/api/v1",ZoneRouter)
 app.use("/api/v1/power-operator/outages",PowerOperatorRouter)
 app.use("/api/v1/power-operator/technician",PowerOperatorTechnicianRouter)
+app.use("/api/v1/power-operator/schedules",PowerOperatorRouter)
 
 
 
