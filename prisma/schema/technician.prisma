@@ -9,8 +9,9 @@ model Technician {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  user    User     @relation(fields: [userId], references: [id])
-  outages Outage[]
+   user           User             @relation(fields: [userId], references: [id])
+  outages        Outage[]
+  serviceRequests ServiceRequest[]
 
   @@index([status])
   @@map("technicians")
