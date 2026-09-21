@@ -9,6 +9,8 @@ import { ServiceRequestRouter } from './module/customer/service_request/service_
 import { PowerOperatorRouter } from './module/POWER_OPERATOR/Outage/P.outage.router';
 import { adminRouter } from './module/admin/admin.router';
 import { PowerOperatorTechnicianRouter } from './module/POWER_OPERATOR/Technician/P.technician.router';
+import { AssignedServiceRouter } from './module/Technician/assigned-service/assigned-service.route';
+import { AssignedOutageRouter } from './module/Technician/assigned-outage/assigned-outage.route';
 
 const app :Application = express()
 
@@ -45,6 +47,23 @@ app.use("/api/v1/power-operator/schedules",PowerOperatorRouter)
 
 
 
+
+
+//technician
+app.use("/api/v1/technician/services",AssignedServiceRouter)
+app.use("/api/v1/technician/outages",AssignedOutageRouter)
+
+
+
+
+
 //admin
 app.use("/api/v1/admin",adminRouter)
+
+
+
+
+
+
+
 export default app;
