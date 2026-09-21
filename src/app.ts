@@ -8,6 +8,7 @@ import { custometOutageRouter } from './module/customer/Outage/outage.router';
 import { ServiceRequestRouter } from './module/customer/service_request/service_request.router';
 import { PowerOperatorRouter } from './module/POWER_OPERATOR/Outage/P.outage.router';
 import { adminRouter } from './module/admin/admin.router';
+import { PowerOperatorTechnicianRouter } from './module/POWER_OPERATOR/Technician/P.technician.router';
 
 const app :Application = express()
 
@@ -39,6 +40,7 @@ app.use("/api/v1/service-requests",ServiceRequestRouter)
 //power operator
 app.use("/api/v1",ZoneRouter)
 app.use("/api/v1/power-operator/outages",PowerOperatorRouter)
+app.use("/api/v1/power-operator/technician",PowerOperatorTechnicianRouter)
 
 
 
