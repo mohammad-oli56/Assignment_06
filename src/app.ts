@@ -5,6 +5,9 @@ import cookieParser from 'cookie-parser';
 import { authRouts } from './module/auth/auth.router';
 import { ZoneRouter } from './module/POWER_OPERATOR/Zone/zone.router';
 import { custometOutageRouter } from './module/customer/Outage/outage.router';
+import { ServiceRequestRouter } from './module/customer/service_request/service_request.router';
+import { PowerOperatorRouter } from './module/POWER_OPERATOR/Outage/P.outage.router';
+import { adminRouter } from './module/admin/admin.router';
 
 const app :Application = express()
 
@@ -28,12 +31,17 @@ app.use("/api/v1/auth",authRouts)
 
 //customer 
 app.use("/api/v1/customer/outages",custometOutageRouter)
+app.use("/api/v1/service-requests",ServiceRequestRouter)
 
 
 
 
 //power operator
 app.use("/api/v1",ZoneRouter)
+app.use("/api/v1/power-operator/outages",PowerOperatorRouter)
 
 
+
+//admin
+app.use("/api/v1/admin",adminRouter)
 export default app;
