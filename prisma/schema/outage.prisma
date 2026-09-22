@@ -1,25 +1,25 @@
 model Outage {
-  id           String         @id @default(uuid())
+  id           String  @id @default(uuid())
   zoneId       String
   reportedBy   String
   technicianId String?
 
-  priority     OutagePriority @default(MEDIUM)
-  status       OutageStatus   @default(REPORTED)
+  priority OutagePriority @default(MEDIUM)
+  status   OutageStatus   @default(REPORTED)
 
-  title        String
-  description  String?
+  title       String
+  description String?
 
-  startedAt    DateTime       @default(now())
-  restoredAt   DateTime?
+  startedAt  DateTime  @default(now())
+  restoredAt DateTime?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  deletedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   // Relations
-  zone       Zone       @relation(fields: [zoneId], references: [id])
-  reporter   User       @relation(fields: [reportedBy], references: [id])
+  zone       Zone        @relation(fields: [zoneId], references: [id])
+  reporter   User        @relation(fields: [reportedBy], references: [id])
   technician Technician? @relation(fields: [technicianId], references: [id])
 
   notifications Notification[]

@@ -4,13 +4,14 @@ import config from './config';
 import cookieParser from 'cookie-parser';
 import { authRouts } from './module/auth/auth.router';
 import { ZoneRouter } from './module/POWER_OPERATOR/Zone/zone.router';
-import { custometOutageRouter } from './module/customer/Outage/outage.router';
-import { ServiceRequestRouter } from './module/customer/service_request/service_request.router';
+import { custometOutageRouter } from './module/CUSTOMER/Outage/outage.router';
+import { ServiceRequestRouter } from './module/CUSTOMER/service_request/service_request.router';
 import { PowerOperatorRouter } from './module/POWER_OPERATOR/Outage/P.outage.router';
 import { adminRouter } from './module/admin/admin.router';
 import { PowerOperatorTechnicianRouter } from './module/POWER_OPERATOR/Technician/P.technician.router';
-import { AssignedServiceRouter } from './module/Technician/assigned-service/assigned-service.route';
-import { AssignedOutageRouter } from './module/Technician/assigned-outage/assigned-outage.route';
+import { AssignedServiceRouter } from './module/TECHNICIAN/assigned-service/assigned-service.route';
+import { AssignedOutageRouter } from './module/TECHNICIAN/assigned-outage/assigned-outage.route';
+import { ServiceRequestRouterOperator } from './module/POWER_OPERATOR/ServiceRequest/servicerequest.router';
 
 const app :Application = express()
 
@@ -44,6 +45,7 @@ app.use("/api/v1",ZoneRouter)
 app.use("/api/v1/power-operator/outages",PowerOperatorRouter)
 app.use("/api/v1/power-operator/technician",PowerOperatorTechnicianRouter)
 app.use("/api/v1/power-operator/schedules",PowerOperatorRouter)
+app.use("/api/v1/power-operator/service-requests",ServiceRequestRouterOperator)
 
 
 
