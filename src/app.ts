@@ -34,7 +34,7 @@ app.use("/api/v1/auth",authRouts)
 
 //customer 
 app.use("/api/v1/customer/outages",custometOutageRouter)
-app.use("/api/v1/service-requests",ServiceRequestRouter)
+app.use("/api/v1/customer/service-requests",ServiceRequestRouter)
 
 
 

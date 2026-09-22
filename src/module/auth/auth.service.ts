@@ -17,6 +17,7 @@ import path from "path";
 
 
 
+
 const registerUser = async (payload: IRegisterUserPayload) => {
     const { name, password, phone } = payload
     const email = payload.email.trim().toLowerCase()
@@ -123,6 +124,10 @@ const verifyuseraccout = async (payload: IverifyUserPayload) => {
 
     const userData = JSON.parse(redisData);
 
+
+    const accountNumber = `ACC-${crypto.randomUUID()}`
+
+
     // Create user
     const createdUser = await prisma.user.create({
         data: {
@@ -131,6 +136,7 @@ const verifyuseraccout = async (payload: IverifyUserPayload) => {
             password: userData.password,
             phone: userData.phone,
             role: "CUSTOMER",
+            accountNumber,
             emailVerified: true,
         },
         omit: {
@@ -315,6 +321,8 @@ const googlelogin = async (payload: IGoogle) => {
         throw new Error("email not found")
     }
 
+    
+    const accountNumber = `ACC-${crypto.randomUUID()}`
 
     const ifUserExistWithGoogleAuth = await prisma.user.findUnique({
         where: {
@@ -370,6 +378,7 @@ const googlelogin = async (payload: IGoogle) => {
                     role: UserRole.CUSTOMER,
                     googleid: googleidTokenPayload.sub,
                     provider: authProvider.GOOGLE,
+                    accountNumber,
                     emailVerified: true
                 }
             })

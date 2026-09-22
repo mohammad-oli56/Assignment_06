@@ -6,7 +6,7 @@ import { UserRole } from "../../../../generated/prisma/enums";
 const router = Router()
 
 router.post("/zones",auth(UserRole.POWER_OPERATOR,UserRole.ADMIN),ZoneController.createZone)
-router.get("/zones",ZoneController.getAllZones)
+router.get("/zones",auth(UserRole.POWER_OPERATOR,UserRole.ADMIN,UserRole.CUSTOMER,UserRole.TECHNICIAN),ZoneController.getAllZones)
 
 
 
