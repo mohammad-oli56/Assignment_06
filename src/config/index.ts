@@ -23,5 +23,7 @@ export default {
      REDIS_PORT:process.env.REDIS_PORT!,
      SMTP_USER:process.env.SMTP_USER!,
      GMAIL_PASSWORD:process.env.GMAIL_PASSWORD!,
+     STORE_ID:process.env.STORE_ID!,
+     STORE_PASSWORD:process.env.STORE_PASSWORD!
      
 };

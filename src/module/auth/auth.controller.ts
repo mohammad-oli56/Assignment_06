@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
 import { IRequestUser } from "./auth.interface";
 
-const registeruser = catchAsync(async (req: Request, res: Response) =>{
+const registeruser = catchAsync(async (req: Request, res: Response,next:NextFunction) =>{
       const payload = req.body
 
     //   console.log(payload)

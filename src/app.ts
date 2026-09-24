@@ -12,6 +12,7 @@ import { PowerOperatorTechnicianRouter } from './module/POWER_OPERATOR/Technicia
 import { AssignedServiceRouter } from './module/TECHNICIAN/assigned-service/assigned-service.route';
 import { AssignedOutageRouter } from './module/TECHNICIAN/assigned-outage/assigned-outage.route';
 import { ServiceRequestRouterOperator } from './module/POWER_OPERATOR/ServiceRequest/servicerequest.router';
+import { PaymentRouter } from './module/CUSTOMER/Payment/payment.router';
 
 const app :Application = express()
 
@@ -36,6 +37,8 @@ app.use("/api/v1/auth",authRouts)
 //customer 
 app.use("/api/v1/customer/outages",custometOutageRouter)
 app.use("/api/v1/customer/service-requests",ServiceRequestRouter)
+app.use("/api/v1/customer/payment",PaymentRouter)
+
 
 
 

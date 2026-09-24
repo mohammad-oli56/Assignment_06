@@ -4,7 +4,7 @@ model Payment {
   serviceRequestId String        @unique
 
   transactionId    String        @unique
-  provider         String        @default("STRIPE")
+  provider         String        @default("SSL COMARZE")
   amount           Decimal       @db.Decimal(10, 2)
   status           PaymentStatus @default(PENDING)
 
