@@ -12,12 +12,12 @@ const paymentCreate = catchAsync(async (req: Request, res: Response) => {
         throw new Error("user not found")
     }
 
-    // console.log(req.user)
-    // console.log(req.body.requestId)
+
 
     const result = await PaymentService.createPaymentInDB(
         req.user,
-        req.body.requestId
+        req.body,
+
     );
 
     sendResponse(res, {
@@ -31,19 +31,24 @@ const paymentCreate = catchAsync(async (req: Request, res: Response) => {
 })
 
 
-const paymentconfirm = catchAsync(
+const paymentconfirmbkash = catchAsync(
   async (req: Request, res: Response) => {
-    console.log("BODY:", req.body);
+   const result = await PaymentService.bkashCallback(req.query)
 
-    // await PaymentService.paymentConfirmInDB(req.body);
-
-    return res.redirect(
-      "https://assignment-05-theta.vercel.app/tenant-dashboard/payment/success"
-    );
+   sendResponse(res, {
+        success: true,
+        statusCode: 200,
+        message: "payment create",
+        data: result
+    })
   }
-);
+)
 
+   // await PaymentService.paymentConfirmInDB(req.body);
 
+    // return res.redirect(
+    //   "https://assignment-05-theta.vercel.app/tenant-dashboard/payment/success"
+    // );
 
 const paymentfail = async (req:Request,res:Response)=>{
     // await PaymentService.paymentFailInDB(req.body);
@@ -88,7 +93,7 @@ const paymentDetails = catchAsync(async (req: Request, res: Response, next: Next
 
 export const PaymentController = {
     paymentCreate,
-    paymentconfirm,
+    paymentconfirmbkash,
     paymentHistory,
     paymentDetails,
     paymentfail

@@ -2,9 +2,9 @@ model Payment {
   id               String        @id @default(uuid())
   userId           String
   serviceRequestId String        @unique
-
   transactionId    String        @unique
-  provider         String        @default("SSL COMARZE")
+
+  provider         Provider
   amount           Decimal       @db.Decimal(10, 2)
   status           PaymentStatus @default(PENDING)
 

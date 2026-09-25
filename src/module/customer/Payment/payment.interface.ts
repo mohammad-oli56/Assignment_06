@@ -1,8 +1,16 @@
+import { Provider } from "../../../../generated/prisma/enums"
+
 export interface ItenantDetails {
  email: string
   name: string
   userId: string
   role: string
+ 
+}
+
+export interface IPaymentpayload {
+  requestId : string
+    paymentMethod: Provider 
 }
 
 

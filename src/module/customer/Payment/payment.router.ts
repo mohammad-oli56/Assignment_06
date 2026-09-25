@@ -8,8 +8,10 @@ const router = Router()
 
 router.post("/create", auth(UserRole.CUSTOMER),PaymentController.paymentCreate)
 
+router.get("/bkash/conform",PaymentController.paymentconfirmbkash)
 
-router.post("/conform",PaymentController.paymentconfirm)
+
+// router.post("/conform",PaymentController.paymentconfirm)
 router.post("/fail",PaymentController.paymentfail)
 
 

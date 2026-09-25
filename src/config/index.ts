@@ -24,6 +24,11 @@ export default {
      SMTP_USER:process.env.SMTP_USER!,
      GMAIL_PASSWORD:process.env.GMAIL_PASSWORD!,
      STORE_ID:process.env.STORE_ID!,
-     STORE_PASSWORD:process.env.STORE_PASSWORD!
+     STORE_PASSWORD:process.env.STORE_PASSWORD!,
+     BKASH_BASE_URL:process.env.BKASH_BASE_URL!,
+     BKASH_USERNAME:process.env.BKASH_USERNAME!,
+     BKASH_PASSWORD:process.env.BKASH_PASSWORD!,
+     BKASH_APP_KEY:process.env.BKASH_APP_KEY!,
+     BKASH_APP_SECRET:process.env.BKASH_APP_SECRET!,
      
 };
