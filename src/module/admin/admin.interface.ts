@@ -6,6 +6,8 @@ export interface IGetAllUsersQuery {
   search?: string
   role?: UserRole
   status?: UserStatus
+
+  [key:string] : any
 }
 
 export interface ICreateStaffPayload {
@@ -15,11 +17,16 @@ export interface ICreateStaffPayload {
   phone?: string
   role: UserRole
 
-  // Only for Technician
+  // Only Technician
   employeeId?: string
   specialization?: string
 }
 
 export interface IUpdateUserStatusPayload {
   status: UserStatus
+}
+
+export interface IAmin {
+  userId: string
+  role:UserRole
 }

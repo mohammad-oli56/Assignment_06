@@ -2,12 +2,12 @@ import express, { Application, Request, Response } from 'express'
 import cors from 'cors'
 import config from './config';
 import cookieParser from 'cookie-parser';
-import { authRouts } from './module/auth/auth.router';
+import { authRouts } from './module/AUTH/auth.router';
 import { ZoneRouter } from './module/POWER_OPERATOR/Zone/zone.router';
 import { custometOutageRouter } from './module/CUSTOMER/Outage/outage.router';
 import { ServiceRequestRouter } from './module/CUSTOMER/service_request/service_request.router';
 import { PowerOperatorRouter } from './module/POWER_OPERATOR/Outage/P.outage.router';
-import { adminRouter } from './module/admin/admin.router';
+import { adminRouter } from './module/ADMIN/admin.router';
 import { PowerOperatorTechnicianRouter } from './module/POWER_OPERATOR/Technician/P.technician.router';
 import { AssignedServiceRouter } from './module/TECHNICIAN/assigned-service/assigned-service.route';
 import { AssignedOutageRouter } from './module/TECHNICIAN/assigned-outage/assigned-outage.route';
@@ -63,7 +63,7 @@ app.use("/api/v1/technician/outages",AssignedOutageRouter)
 
 
 //admin
-app.use("/api/v1/admin",adminRouter)
+app.use("/api/v1/admin/",adminRouter)
 
 
 

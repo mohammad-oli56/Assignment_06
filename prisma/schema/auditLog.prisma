@@ -1,6 +1,7 @@
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
+  author_role       UserRole
 
   action     String
   entityType String

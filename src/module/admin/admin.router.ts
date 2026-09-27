@@ -1,11 +1,12 @@
 import { Router } from "express"
-import { AdminController } from "./admin.controller"
+
 import { auth } from "../../middleware/auth"
 import { UserRole } from "../../../generated/prisma/client"
+import { AdminController } from "./admin.controller"
 
 const router = Router()
 
-// Admin only routes
+
 
 router.get(
   "/users",
@@ -13,10 +14,12 @@ router.get(
   AdminController.getAllUsers
 )
 
-router.post(
-  "/users",
+
+
+router.get(
+  "/users/:id",
   auth(UserRole.ADMIN),
-  AdminController.createStaff
+  AdminController.singleUser
 )
 
 router.patch(
@@ -25,11 +28,21 @@ router.patch(
   AdminController.updateUserStatus
 )
 
+
 router.delete(
-  "/users/:id",
+  "/users/:id/delete",
   auth(UserRole.ADMIN),
   AdminController.deleteUser
 )
+
+
+router.post(
+  "/createStaff",
+  auth(UserRole.ADMIN),
+  AdminController.createStaff
+)
+
+
 
 router.get(
   "/dashboard-stats",

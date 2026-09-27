@@ -1,60 +1,136 @@
 import bcrypt from "bcryptjs"
-
 import { prisma } from "../../lib/prisma"
+import { Prisma, UserRole, UserStatus } from "../../../generated/prisma/client"
+import { IAmin, ICreateStaffPayload, IGetAllUsersQuery, IUpdateUserStatusPayload } from "./admin.interface"
 
 
-import { UserRole, UserStatus } from "../../../generated/prisma/client"
-import { ICreateStaffPayload, IGetAllUsersQuery, IUpdateUserStatusPayload } from "./admin.interface"
 
-// ========================================
-// Get All Users
-// ========================================
+const getAllUsers = async (query: IGetAllUsersQuery) => {
+  const {
+    page,
+    limit,
+    name,
+    status,
+  } = query;
 
-const getAllUsers = async (payload: IGetAllUsersQuery) => {
-  const page = Number(payload.page) || 1
-  const limit = Number(payload.limit) || 10
+  // Pagination
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 10;
 
-  const skip = (page - 1) * limit
+  const skip = (pageNumber - 1) * limitNumber;
 
-  const search = payload.search?.trim()
-  const role = payload.role
-  const status = payload.status
+  // Only CUSTOMER users
+  const where: Prisma.UserWhereInput = {
+    // role: UserRole.CUSTOMER,
+  };
 
-  const where = {
-    deletedAt: null,
+  // Name search
+  if (name) {
+    where.name = {
+      contains: name,
+      mode: "insensitive",
+    };
+  }
 
-    ...(search && {
-      OR: [
-        {
-          name: {
-            contains: search,
-            mode: "insensitive" as const,
-          },
-        },
-        {
-          email: {
-            contains: search,
-            mode: "insensitive" as const,
-          },
-        },
-      ],
-    }),
-
-    ...(role && {
-      role,
-    }),
-
-    ...(status && {
-      status,
-    }),
+  // Status filter
+  if (status) {
+    where.status = status;
   }
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
       skip,
-      take: limit,
+      take: limitNumber,
+      orderBy: {
+        createdAt: "desc",
+      },
+      omit: {
+        password: true
+      }
+    }),
 
+    prisma.user.count({
+      where,
+    }),
+  ]);
+
+  return {
+    data: users,
+    pagination: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+    },
+  };
+};
+
+
+
+
+const getSingleuser = async (
+  userId: string,
+) => {
+  // console.log(userId)
+  const singleuser = await prisma.user.findUnique({
+    where: {
+      id: userId,
+      deletedAt:null
+    },
+    omit: {
+      password: true
+    }
+  })
+  if (!singleuser) {
+    throw new Error("user not found")
+  }
+  // console.log(singleuser)
+  return singleuser
+}
+
+
+const updateUserStatus = async (
+  adminUserId: IAmin,
+  id: string,
+  payload: UserStatus
+) => {
+  console.log("Admin:", adminUserId)
+  console.log("Target User:", id)
+  console.log("Payload:", payload)
+
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      id,
+      deletedAt:null
+    },
+  })
+
+  if (!existingUser) {
+    throw new Error("User not found")
+  }
+
+  // Admin status change prevent
+  if (existingUser.role === UserRole.ADMIN) {
+    throw new Error("Admin status cannot be changed")
+  }
+
+  // Same status prevent
+  if (existingUser.status === payload) {
+    throw new Error(`User is already ${payload}`)
+  }
+
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    console.log("inside transaction", payload)
+    const user = await tx.user.update({
+
+      where: {
+        id: existingUser.id,
+      },
+      data: {
+        status: payload,
+
+      },
       select: {
         id: true,
         name: true,
@@ -62,40 +138,32 @@ const getAllUsers = async (payload: IGetAllUsersQuery) => {
         role: true,
         status: true,
         phone: true,
-        isActive: true,
-        emailVerified: true,
-        profilePhoto: true,
-        address: true,
         createdAt: true,
         updatedAt: true,
       },
+    })
 
-      orderBy: {
-        createdAt: "desc",
+    await tx.auditLog.create({
+      data: {
+        userId: adminUserId.userId,
+        author_role: adminUserId.role,
+        action: "UPDATE_USER_STATUS",
+        entityType: "USER",
+        entityId: existingUser.id,
       },
-    }),
+    })
 
-    prisma.user.count({
-      where,
-    }),
-  ])
+    return user
+  })
 
-  return {
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-    data: users,
-  }
+  return updatedUser
 }
 
-// ========================================
-// Create Technician / Power Operator
-// ========================================
 
-const createStaff = async (payload: ICreateStaffPayload) => {
+const createStaff = async (
+  adminUserId: IAmin,
+  payload: ICreateStaffPayload
+) => {
   const {
     name,
     email,
@@ -132,9 +200,20 @@ const createStaff = async (payload: ICreateStaffPayload) => {
     throw new Error("Employee ID is required for Technician")
   }
 
+  // Power Operator should not have Technician fields
+  if (
+    role === UserRole.POWER_OPERATOR &&
+    (employeeId || specialization)
+  ) {
+    throw new Error(
+      "Employee ID and specialization are only for Technician"
+    )
+  }
+
   const hashedPassword = await bcrypt.hash(password, 10)
 
   const result = await prisma.$transaction(async (tx) => {
+    // Create User
     const user = await tx.user.create({
       data: {
         name,
@@ -144,10 +223,14 @@ const createStaff = async (payload: ICreateStaffPayload) => {
         role,
         emailVerified: true,
       },
+      omit: {
+        password: true,
+      },
     })
 
     let technician = null
 
+    // Create Technician profile
     if (role === UserRole.TECHNICIAN) {
       technician = await tx.technician.create({
         data: {
@@ -158,82 +241,42 @@ const createStaff = async (payload: ICreateStaffPayload) => {
       })
     }
 
+    // Create Audit Log
+    await tx.auditLog.create({
+      data: {
+        userId: adminUserId.userId,
+        author_role:adminUserId.role,
+         action:
+          role === UserRole.TECHNICIAN
+            ? "CREATE_TECHNICIAN"
+            : "CREATE_POWER_OPERATOR",
+        entityType: "USER",
+        entityId: user.id,
+      },
+    })
+
     return {
       user,
       technician,
     }
   })
 
-  const { password: _, ...userWithoutPassword } = result.user
-
-  return {
-    user: userWithoutPassword,
-    technician: result.technician,
-  }
+  return result
 }
 
-// ========================================
-// Update User Status
-// ========================================
 
-const updateUserStatus = async (
-  id: string,
-  payload: IUpdateUserStatusPayload
+const deleteUser = async (
+  adminUserId: IAmin,
+  id: string
 ) => {
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await prisma.user.findFirst({
     where: {
       id,
+     deletedAt:null
     },
   })
 
-  if (!existingUser || existingUser.deletedAt) {
-    throw new Error("User not found")
-  }
-
-  // Admin status change prevent
-  if (existingUser.role === UserRole.ADMIN) {
-    throw new Error("Admin status cannot be changed")
-  }
-
-  const updatedUser = await prisma.user.update({
-    where: {
-      id,
-    },
-
-    data: {
-      status: payload.status,
-      isActive: payload.status === "ACTIVE",
-    },
-
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      status: true,
-      phone: true,
-      isActive: true,
-      emailVerified: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  })
-
-  return updatedUser
-}
-
-// ========================================
-// Soft Delete User
-// ========================================
-
-const deleteUser = async (id: string) => {
-  const existingUser = await prisma.user.findUnique({
-    where: {
-      id,
-    },
-  })
-
-  if (!existingUser || existingUser.deletedAt) {
+  if (!existingUser) {
     throw new Error("User not found")
   }
 
@@ -242,53 +285,80 @@ const deleteUser = async (id: string) => {
     throw new Error("Admin cannot be deleted")
   }
 
-  const deletedUser = await prisma.user.update({
-    where: {
-      id,
-    },
+  const deletedUser = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: {
+        id: existingUser.id,
+      },
+      data: {
+        status:"DELETED",
+        isActive:false,
+        deletedAt: new Date(),
+      },
+     omit:{
+      password:true
+     }
+    })
 
-    data: {
-      deletedAt: new Date(),
-      isActive: false,
-      status: UserStatus.DELETED,
-    },
+    await tx.auditLog.create({
+      data: {
+        userId: adminUserId.userId,
+        author_role:adminUserId.role,
+        action: "DELETE_USER",
+        entityType: "USER",
+        entityId: existingUser.id,
+      },
+    })
 
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      status: true,
-      deletedAt: true,
-    },
+    return user
   })
 
   return deletedUser
 }
 
-// ========================================
-// Dashboard Stats
-// ========================================
 
 const getDashboardStats = async () => {
   const [
     totalUsers,
-    totalCustomers,
-    totalTechnicians,
-    totalPowerOperators,
+    deletedUsers,
+    customers,
+    technicians,
+    powerOperators,
     activeUsers,
-    inactiveUsers,
-    totalZones,
+    blockedUsers,
+
     totalOutages,
-    activeOutages,
+    reportedOutages,
+    assignedOutages,
+    inProgressOutages,
+    restoredOutages,
+
     totalServiceRequests,
-    pendingServiceRequests,
+    pendingRequests,
+    confirmedRequests,
+    inProgressRequests,
+    completedRequests,
+
     totalPayments,
     paidPayments,
+    pendingPayments,
+    failedPayments,
   ] = await Promise.all([
+    // ================= USER =================
+
+    // Only active/non-deleted users
     prisma.user.count({
       where: {
         deletedAt: null,
+      },
+    }),
+
+    // Deleted users
+    prisma.user.count({
+      where: {
+        deletedAt: {
+          not: null,
+        },
       },
     }),
 
@@ -313,25 +383,20 @@ const getDashboardStats = async () => {
       },
     }),
 
-    prisma.user.count({
-      where: {
-        isActive: true,
-        deletedAt: null,
-      },
-    }),
+   prisma.user.count({
+    where: {
+      status: UserStatus.ACTIVE,
+      deletedAt: null,
+    },
+  }),
 
-    prisma.user.count({
-      where: {
-        isActive: false,
-        deletedAt: null,
-      },
-    }),
-
-    prisma.zone.count({
-      where: {
-        deletedAt: null,
-      },
-    }),
+  prisma.user.count({
+    where: {
+      status: UserStatus.BLOCKED,
+      deletedAt: null,
+    },
+  }),
+    // ================= OUTAGE =================
 
     prisma.outage.count({
       where: {
@@ -341,12 +406,33 @@ const getDashboardStats = async () => {
 
     prisma.outage.count({
       where: {
-        status: {
-          in: ["REPORTED", "ACKNOWLEDGED", "ASSIGNED", "IN_PROGRESS"],
-        },
+        status: "REPORTED",
         deletedAt: null,
       },
     }),
+
+    prisma.outage.count({
+      where: {
+        status: "ASSIGNED",
+        deletedAt: null,
+      },
+    }),
+
+    prisma.outage.count({
+      where: {
+        status: "IN_PROGRESS",
+        deletedAt: null,
+      },
+    }),
+
+    prisma.outage.count({
+      where: {
+        status: "RESTORED",
+        deletedAt: null,
+      },
+    }),
+
+    // ================= SERVICE REQUEST =================
 
     prisma.serviceRequest.count({
       where: {
@@ -361,6 +447,29 @@ const getDashboardStats = async () => {
       },
     }),
 
+    prisma.serviceRequest.count({
+      where: {
+        status: "CONFIRMED",
+        deletedAt: null,
+      },
+    }),
+
+    prisma.serviceRequest.count({
+      where: {
+        status: "IN_PROGRESS",
+        deletedAt: null,
+      },
+    }),
+
+    prisma.serviceRequest.count({
+      where: {
+        status: "COMPLETED",
+        deletedAt: null,
+      },
+    }),
+
+    // ================= PAYMENT =================
+
     prisma.payment.count(),
 
     prisma.payment.count({
@@ -368,42 +477,57 @@ const getDashboardStats = async () => {
         status: "PAID",
       },
     }),
+
+    prisma.payment.count({
+      where: {
+        status: "PENDING",
+      },
+    }),
+
+    prisma.payment.count({
+      where: {
+        status: "FAILED",
+      },
+    }),
   ])
 
   return {
     users: {
       total: totalUsers,
-      customers: totalCustomers,
-      technicians: totalTechnicians,
-      powerOperators: totalPowerOperators,
+      deleted: deletedUsers,
+      customers,
+      technicians,
+      powerOperators,
       active: activeUsers,
-      inactive: inactiveUsers,
-    },
-
-    zones: {
-      total: totalZones,
+      blocked: blockedUsers,
     },
 
     outages: {
       total: totalOutages,
-      active: activeOutages,
+      reported: reportedOutages,
+      assigned: assignedOutages,
+      inProgress: inProgressOutages,
+      restored: restoredOutages,
     },
 
     serviceRequests: {
       total: totalServiceRequests,
-      pending: pendingServiceRequests,
+      pending: pendingRequests,
+      confirmed: confirmedRequests,
+      inProgress: inProgressRequests,
+      completed: completedRequests,
     },
 
     payments: {
       total: totalPayments,
       paid: paidPayments,
+      pending: pendingPayments,
+      failed: failedPayments,
     },
   }
 }
 
-// ========================================
-// Audit Logs
-// ========================================
+
 
 const getAuditLogs = async (payload: IGetAllUsersQuery) => {
   const page = Number(payload.page) || 1
@@ -438,6 +562,7 @@ const getAuditLogs = async (payload: IGetAllUsersQuery) => {
 
 export const AdminService = {
   getAllUsers,
+  getSingleuser,
   createStaff,
   updateUserStatus,
   deleteUser,

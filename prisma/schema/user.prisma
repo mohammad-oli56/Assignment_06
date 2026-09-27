@@ -12,7 +12,7 @@ model User {
   emailVerified Boolean      @default(false)
   profilePhoto  String?
   address       String?
-  accountNumber String       @unique
+  accountNumber String?       @unique
 
   deletedAt DateTime?
   createdAt DateTime  @default(now())

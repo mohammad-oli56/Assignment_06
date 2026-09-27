@@ -2,6 +2,8 @@ import { Request, Response } from "express"
 
 import { catchAsync } from "../../utils/catchAsync"
 import { AdminService } from "./admin.service"
+import { sendResponse } from "../../utils/sendResponse"
+
 
 // Get all users
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
@@ -14,9 +16,32 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   })
 })
 
+
+const singleUser = catchAsync(async (req: Request, res: Response) => {
+
+  console.log(req.params.id)
+
+
+  const result = await AdminService.getSingleuser(
+
+    req.params.id as string
+  )
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Service request cancelled successfully",
+    data: result,
+  })
+})
+
+
 // Create Technician / Power Operator
 const createStaff = catchAsync(async (req: Request, res: Response) => {
-  const result = await AdminService.createStaff(req.body)
+  if (!req.user) {
+    throw new Error("User not found");
+  }
+  const result = await AdminService.createStaff(req.user, req.body)
 
   res.status(201).json({
     success: true,
@@ -28,26 +53,33 @@ const createStaff = catchAsync(async (req: Request, res: Response) => {
 // Activate / Deactivate user
 const updateUserStatus = catchAsync(
   async (req: Request, res: Response) => {
-    const { id } = req.params
+    const { id } = req.params;
+
+    if (!req.user) {
+      throw new Error("User not found");
+    }
 
     const result = await AdminService.updateUserStatus(
+      req.user,
       id as string,
-      req.body
-    )
+      req.body.status
+    );
 
     res.status(200).json({
       success: true,
       message: "User status updated successfully",
       data: result,
-    })
+    });
   }
-)
+);
 
 // Soft delete user
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params
-
-  const result = await AdminService.deleteUser(id as string)
+  if (!req.user) {
+    throw new Error("User not found");
+  }
+  const result = await AdminService.deleteUser(req.user, id as string)
 
   res.status(200).json({
     success: true,
@@ -87,4 +119,5 @@ export const AdminController = {
   deleteUser,
   getDashboardStats,
   getAuditLogs,
+  singleUser
 }
