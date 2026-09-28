@@ -19,7 +19,7 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
 
 const singleUser = catchAsync(async (req: Request, res: Response) => {
 
-  console.log(req.params.id)
+  // console.log(req.params.id)
 
 
   const result = await AdminService.getSingleuser(

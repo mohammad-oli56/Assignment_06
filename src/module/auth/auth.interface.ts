@@ -42,3 +42,15 @@ export interface IResetpassword{
   newPassword : string
   otp: string
 }
+
+
+ export interface IProfileUpdate {
+  name?: string
+  phone?: string
+  address?: string
+}
+
+export interface ICustomer {
+  userId: string
+  role: UserRole
+}

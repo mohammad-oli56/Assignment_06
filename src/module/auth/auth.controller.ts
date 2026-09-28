@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
-import { IRequestUser } from "./auth.interface";
+import { ICustomer, IRequestUser } from "./auth.interface";
 
 const registeruser = catchAsync(async (req: Request, res: Response,next:NextFunction) =>{
       const payload = req.body
@@ -212,6 +212,56 @@ const resetpassword = catchAsync(async (req: Request, res: Response) => {
     })
 })
 
+
+
+const updateProfile = catchAsync(async (req: Request, res: Response) => { 
+    const payload = req.body
+
+
+    if(!req.user){
+        throw new Error("User not found")
+    }
+
+    const result = await AuthService.updateProfile(req.user,payload)
+   
+
+
+    sendResponse(res, {
+        statusCode:200,
+        success: true,
+        message: 'Update profile successfully',
+        data: result
+    })
+})
+
+
+const uploadImage = catchAsync(
+  async (req: Request, res: Response) => {
+    // console.log(req.file)
+
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    if (!req.file) {
+      throw new Error("Profile image is required")
+    }
+
+    const result = await AuthService.uploadimage(
+      req.user,
+      req.file.buffer
+    )
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Profile photo uploaded successfully",
+      data: result,
+    })
+  }
+)
+
+
 export const AuthController = {
     registeruser,
     loginUser,
@@ -220,5 +270,7 @@ export const AuthController = {
     googlelogin,
     forgotpassword,
     resetpassword,
-    verifyuseraccout
+    verifyuseraccout,
+    updateProfile,
+    uploadImage
 }

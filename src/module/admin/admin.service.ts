@@ -95,9 +95,9 @@ const updateUserStatus = async (
   id: string,
   payload: UserStatus
 ) => {
-  console.log("Admin:", adminUserId)
-  console.log("Target User:", id)
-  console.log("Payload:", payload)
+  // console.log("Admin:", adminUserId)
+  // console.log("Target User:", id)
+  // console.log("Payload:", payload)
 
   const existingUser = await prisma.user.findFirst({
     where: {
@@ -121,7 +121,7 @@ const updateUserStatus = async (
   }
 
   const updatedUser = await prisma.$transaction(async (tx) => {
-    console.log("inside transaction", payload)
+    // console.log("inside transaction", payload)
     const user = await tx.user.update({
 
       where: {

@@ -328,7 +328,7 @@ const bkashCallback = async (query: Record<string, any>) => {
   const paymentId = query.paymentID
   const status = query.status
 
-  console.log(paymentId)
+//   console.log(paymentId)
 
   if (!paymentId) {
     throw new Error("paymentID missing")
@@ -362,7 +362,7 @@ const bkashCallback = async (query: Record<string, any>) => {
 
   const executedPayment = await executePaymentResponse.json()
 
-  console.log("bKash execute response:", executedPayment)
+//   console.log("bKash execute response:", executedPayment)
 
   // bKash payment failed
   if (status !== "success") {

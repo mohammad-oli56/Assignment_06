@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs"
 import { JwtPayload, SignOptions } from 'jsonwebtoken'
 import { jwtUtils } from "../../utils/jwt"
 import { prisma } from "../../lib/prisma"
-import { IForgotpassword, IGoogle, ILoginUserPayload, IRegisterUserPayload, IRequestUser, IResetpassword, IverifyUserPayload } from "./auth.interface"
+import { ICustomer, IForgotpassword, IGoogle, ILoginUserPayload, IProfileUpdate, IRegisterUserPayload, IRequestUser, IResetpassword, IverifyUserPayload } from "./auth.interface"
 import config from "../../config"
 import { authProvider, UserRole, UserStatus } from "../../../generated/prisma/enums"
 import { OAuth2Client, TokenPayload } from "google-auth-library"
@@ -14,6 +14,7 @@ import { Redisclient } from "../../lib/redis"
 import { transporter } from "../../lib/nodemailer"
 import fs from "fs";
 import path from "path";
+import { cloudinary } from "../../lib/cloudinary"
 
 
 
@@ -321,7 +322,7 @@ const googlelogin = async (payload: IGoogle) => {
         throw new Error("email not found")
     }
 
-    
+
     const accountNumber = `ACC-${crypto.randomUUID()}`
 
     const ifUserExistWithGoogleAuth = await prisma.user.findUnique({
@@ -595,6 +596,152 @@ const resetPassword = async (payload: IResetpassword) => {
 }
 
 
+
+const updateProfile = async (
+    userPayload: ICustomer,
+    payload: IProfileUpdate
+) => {
+    const existingUser = await prisma.user.findFirst({
+        where: {
+            id: userPayload.userId,
+            deletedAt: null,
+        },
+    })
+
+    if (!existingUser) {
+        throw new Error("User not found")
+    }
+
+    const updateData: IProfileUpdate = {}
+
+    if (payload.name !== undefined) {
+        updateData.name = payload.name
+    }
+
+    if (payload.phone !== undefined) {
+        updateData.phone = payload.phone
+    }
+
+
+
+    if (payload.address !== undefined) {
+        updateData.address = payload.address
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.update({
+            where: {
+                id: userPayload.userId,
+            },
+            data: updateData,
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                profilePhoto: true,
+                address: true,
+                role: true,
+                status: true,
+                accountNumber: true,
+                updatedAt: true,
+            },
+        })
+
+        await tx.auditLog.create({
+            data: {
+                userId: userPayload.userId,
+                author_role: userPayload.role,
+                action: "UPDATE_PROFILE",
+                entityType: "USER",
+                entityId: userPayload.userId,
+            },
+        })
+
+        return user
+    })
+
+    return result
+}
+
+
+const uploadimage = async (
+  userPayload: ICustomer,
+  buffer: Buffer
+) => {
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      id: userPayload.userId,
+      deletedAt: null,
+    },
+  })
+
+  if (!existingUser) {
+    throw new Error("User not found")
+  }
+
+  const cloudinaryResult = await new Promise<any>(
+    (resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            resource_type: "image",
+            folder: "power-outage/profile",
+          },
+          (error, result) => {
+            if (error) {
+              return reject(error)
+            }
+
+            resolve(result)
+          }
+        )
+        .end(buffer)
+    }
+  )
+
+  if (!cloudinaryResult?.secure_url) {
+    throw new Error("Image upload failed")
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: {
+        id: userPayload.userId,
+      },
+      data: {
+        profilePhoto: cloudinaryResult.secure_url,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        profilePhoto: true,
+        address: true,
+        role: true,
+        status: true,
+        accountNumber: true,
+        updatedAt: true,
+      },
+    })
+
+    await tx.auditLog.create({
+      data: {
+        userId: userPayload.userId,
+        author_role: userPayload.role,
+        action: "UPLOAD_PROFILE_PHOTO",
+        entityType: "USER",
+        entityId: userPayload.userId,
+      },
+    })
+
+    return user
+  })
+
+  return result
+}
+
 export const AuthService = {
     registerUser,
     loginUser,
@@ -603,5 +750,7 @@ export const AuthService = {
     googlelogin,
     forgotPassword,
     resetPassword,
-    verifyuseraccout
+    verifyuseraccout,
+    updateProfile,
+    uploadimage
 }
