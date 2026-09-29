@@ -13,6 +13,8 @@ import { AssignedServiceRouter } from './module/TECHNICIAN/assigned-service/assi
 import { AssignedOutageRouter } from './module/TECHNICIAN/assigned-outage/assigned-outage.route';
 import { ServiceRequestRouterOperator } from './module/POWER_OPERATOR/ServiceRequest/servicerequest.router';
 import { PaymentRouter } from './module/CUSTOMER/Payment/payment.router';
+import { SchedulesRouter } from './module/CUSTOMER/Schedule/schedule.router';
+import { NotificationRouter } from './module/CUSTOMER/Notification/notification.router';
 
 const app :Application = express()
 
@@ -38,6 +40,8 @@ app.use("/api/v1/auth",authRouts)
 app.use("/api/v1/customer/outages",custometOutageRouter)
 app.use("/api/v1/customer/service-requests",ServiceRequestRouter)
 app.use("/api/v1/customer/payment",PaymentRouter)
+app.use("/api/v1/customer/schedules",SchedulesRouter)
+app.use("/api/v1/customer/notification",NotificationRouter)
 
 
 
