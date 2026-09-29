@@ -19,7 +19,7 @@ const createSchedule = catchAsync(
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: "Schedule created successfully",
+      message: "Schedule created successfully 2",
       data: result,
     })
   }
@@ -57,8 +57,19 @@ const getSingleSchedule = catchAsync(
 
 const updateSchedule = catchAsync(
   async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+
+    if (!id) {
+      throw new Error("Schedule ID is required")
+    }
+
     const result = await ScheduleService.updateSchedule(
-      req.params.id as string,
+      req.user.userId,
+      id as string,
       req.body
     )
 
@@ -73,8 +84,19 @@ const updateSchedule = catchAsync(
 
 const deleteSchedule = catchAsync(
   async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+
+    if (!id) {
+      throw new Error("Schedule ID is required")
+    }
+
     const result = await ScheduleService.deleteSchedule(
-      req.params.id as string
+      req.user.userId,
+      id as string
     )
 
     sendResponse(res, {

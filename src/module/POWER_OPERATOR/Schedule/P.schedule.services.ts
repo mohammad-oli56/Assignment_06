@@ -37,21 +37,22 @@ const createSchedule = async (
     throw new Error("Start time must be before end time")
   }
 
-  const overlappingSchedule = await prisma.schedule.findFirst({
-    where: {
-      zoneId,
-      deletedAt: null,
-      status: {
-        in: ["SCHEDULED", "ACTIVE"],
+  const overlappingSchedule =
+    await prisma.schedule.findFirst({
+      where: {
+        zoneId,
+        deletedAt: null,
+        status: {
+          in: ["SCHEDULED", "ACTIVE"],
+        },
+        startTime: {
+          lt: end,
+        },
+        endTime: {
+          gt: start,
+        },
       },
-      startTime: {
-        lt: end,
-      },
-      endTime: {
-        gt: start,
-      },
-    },
-  })
+    })
 
   if (overlappingSchedule) {
     throw new Error(
@@ -59,28 +60,42 @@ const createSchedule = async (
     )
   }
 
-  const schedule = await prisma.schedule.create({
-    data: {
-      zoneId,
-      createdBy: userId,
-      startTime: start,
-      endTime: end,
-      reason,
-      status: "SCHEDULED",
-    },
-    include: {
-      zone: true,
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const schedule = await tx.schedule.create({
+      data: {
+        zoneId,
+        createdBy: userId,
+        startTime: start,
+        endTime: end,
+        reason,
+        status: "SCHEDULED",
+      },
+      include: {
+        zone: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
+    })
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "CREATE_SCHEDULE",
+        entityType: "SCHEDULE",
+        entityId: schedule.id,
+      },
+    })
+
+    return schedule
   })
 
-  return schedule
+  return result
 }
 
 const getAllSchedules = async (
@@ -166,6 +181,7 @@ const getSingleSchedule = async (scheduleId: string) => {
 
 
 const updateSchedule = async (
+  userId: string,
   scheduleId: string,
   payload: IUpdateSchedulePayload
 ) => {
@@ -190,7 +206,10 @@ const updateSchedule = async (
     ? new Date(payload.endTime)
     : existingSchedule.endTime
 
-  if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+  if (
+    isNaN(startTime.getTime()) ||
+    isNaN(endTime.getTime())
+  ) {
     throw new Error("Invalid start or end time")
   }
 
@@ -209,24 +228,25 @@ const updateSchedule = async (
     throw new Error("Zone not found")
   }
 
-  const overlappingSchedule = await prisma.schedule.findFirst({
-    where: {
-      id: {
-        not: scheduleId,
+  const overlappingSchedule =
+    await prisma.schedule.findFirst({
+      where: {
+        id: {
+          not: scheduleId,
+        },
+        zoneId,
+        deletedAt: null,
+        status: {
+          in: ["SCHEDULED", "ACTIVE"],
+        },
+        startTime: {
+          lt: endTime,
+        },
+        endTime: {
+          gt: startTime,
+        },
       },
-      zoneId,
-      deletedAt: null,
-      status: {
-        in: ["SCHEDULED", "ACTIVE"],
-      },
-      startTime: {
-        lt: endTime,
-      },
-      endTime: {
-        gt: startTime,
-      },
-    },
-  })
+    })
 
   if (overlappingSchedule) {
     throw new Error(
@@ -234,34 +254,51 @@ const updateSchedule = async (
     )
   }
 
-  const schedule = await prisma.schedule.update({
-    where: {
-      id: scheduleId,
-    },
-    data: {
-      zoneId,
-      startTime,
-      endTime,
-      reason: payload.reason,
-      status: payload.status,
-    },
-    include: {
-      zone: true,
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const schedule = await tx.schedule.update({
+      where: {
+        id: scheduleId,
+      },
+      data: {
+        zoneId,
+        startTime,
+        endTime,
+        reason: payload.reason,
+        status: payload.status,
+      },
+      include: {
+        zone: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
+    })
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "UPDATE_SCHEDULE",
+        entityType: "SCHEDULE",
+        entityId: schedule.id,
+      },
+    })
+
+    return schedule
   })
 
-  return schedule
+  return result
 }
 
 
-const deleteSchedule = async (scheduleId: string) => {
+const deleteSchedule = async (
+  userId: string,
+  scheduleId: string
+) => {
   const schedule = await prisma.schedule.findFirst({
     where: {
       id: scheduleId,
@@ -282,13 +319,27 @@ const deleteSchedule = async (scheduleId: string) => {
     )
   }
 
-  const result = await prisma.schedule.update({
-    where: {
-      id: scheduleId,
-    },
-    data: {
-      deletedAt: new Date(),
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const deletedSchedule = await tx.schedule.update({
+      where: {
+        id: scheduleId,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    })
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "DELETE_SCHEDULE",
+        entityType: "SCHEDULE",
+        entityId: scheduleId,
+      },
+    })
+
+    return deletedSchedule
   })
 
   return result
