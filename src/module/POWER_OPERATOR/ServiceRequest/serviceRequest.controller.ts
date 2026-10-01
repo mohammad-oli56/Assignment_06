@@ -34,12 +34,25 @@ const getSingleServiceRequest = catchAsync(
   }
 )
 
+
 const updateServiceRequestStatus = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await ServiceRequestService.updateServiceRequestStatus(
-      req.params.id as string,
-      req.body
-    )
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+
+    if (!id) {
+      throw new Error("Service request ID is required")
+    }
+
+    const result =
+      await ServiceRequestService.updateServiceRequestStatus(
+        req.user.userId,
+        id as string,
+        req.body
+      )
 
     sendResponse(res, {
       statusCode: 200,
@@ -52,10 +65,27 @@ const updateServiceRequestStatus = catchAsync(
 
 const assignTechnician = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await ServiceRequestService.assignTechnician(
-      req.params.id as string,
-      req.body.technicianId
-    )
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+    const { technicianId } = req.body
+
+    if (!id) {
+      throw new Error("Service request ID is required")
+    }
+
+    if (!technicianId) {
+      throw new Error("Technician ID is required")
+    }
+
+    const result =
+      await ServiceRequestService.assignTechnician(
+        req.user.userId,
+        id as string,
+        technicianId
+      )
 
     sendResponse(res, {
       statusCode: 200,
@@ -68,9 +98,21 @@ const assignTechnician = catchAsync(
 
 const cancelServiceRequest = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await ServiceRequestService.cancelServiceRequest(
-      req.params.id as string
-    )
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+
+    if (!id) {
+      throw new Error("Service request ID is required")
+    }
+
+    const result =
+      await ServiceRequestService.cancelServiceRequest(
+        req.user.userId,
+        id as string
+      )
 
     sendResponse(res, {
       statusCode: 200,
@@ -80,6 +122,8 @@ const cancelServiceRequest = catchAsync(
     })
   }
 )
+
+
 
 export const ServiceRequestController = {
   getAllServiceRequests,

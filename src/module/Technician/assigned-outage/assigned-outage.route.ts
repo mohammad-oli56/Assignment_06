@@ -13,13 +13,13 @@ router.get(
 )
 
 router.get(
-  "/:id",
+  "/my-assigned/:id",
   auth(UserRole.TECHNICIAN),
   AssignedOutageController.getSingleAssignedOutage
 )
 
 router.patch(
-  "/:id/status",
+  "/my-assigned/:id/status",
   auth(UserRole.TECHNICIAN),
   AssignedOutageController.updateOutageStatus
 )

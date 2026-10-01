@@ -142,6 +142,7 @@ const getSingleOutage = async (outageId: string) => {
 }
 
 const assignTechnician = async (
+  userId: string,
   outageId: string,
   technicianId: string
 ) => {
@@ -163,7 +164,9 @@ const assignTechnician = async (
   }
 
   if (outage.technicianId) {
-    throw new Error("A technician is already assigned to this outage")
+    throw new Error(
+      "A technician is already assigned to this outage"
+    )
   }
 
   const technician = await prisma.technician.findFirst({
@@ -238,19 +241,39 @@ const assignTechnician = async (
       },
     })
 
+    // Technician notification
+    await tx.notification.create({
+      data: {
+        userId: technician.user.id,
+        title: "New Outage Assigned",
+        message: `You have been assigned a new outage. Outage ID: ${outageId}`,
+        // type: "OUTAGE",
+      },
+    })
+
+    // Audit log
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "ASSIGN_TECHNICIAN",
+        entityType: "OUTAGE",
+        entityId: outageId,
+      },
+    })
+
     return updatedOutage
   })
 
   return result
 }
 
-
 const updateOutageStatus = async (
+  userId: string,
   outageId: string,
   payload: IUpdateOutageStatusPayload
 ) => {
-      const  status  = payload.status
-
+  const { status } = payload
 
   const outage = await prisma.outage.findFirst({
     where: {
@@ -265,14 +288,12 @@ const updateOutageStatus = async (
 
   if (
     outage.status === OutageStatus.RESTORED ||
-    outage.status === OutageStatus.CANCELLED||
+    outage.status === OutageStatus.CANCELLED ||
     outage.status === OutageStatus.ASSIGNED ||
     outage.status === OutageStatus.IN_PROGRESS
   ) {
     throw new Error("This outage status cannot be changed")
   }
-
-// console.log(status)
 
   if (status !== "ACKNOWLEDGED") {
     throw new Error(
@@ -286,50 +307,59 @@ const updateOutageStatus = async (
     )
   }
 
-  const result = await prisma.outage.update({
-    where: {
-      id: outageId,
-    },
-    data: {
-      status: "ACKNOWLEDGED",
-    },
-    include: {
-      zone: true,
-
-      reporter: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-        },
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedOutage = await tx.outage.update({
+      where: {
+        id: outageId,
       },
-
-      technician: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
+      data: {
+        status: "ACKNOWLEDGED",
+      },
+      include: {
+        zone: true,
+        reporter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        technician: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
             },
           },
         },
       },
-    },
+    })
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "ACKNOWLEDGE_OUTAGE",
+        entityType: "OUTAGE",
+        entityId: outageId,
+      },
+    })
+
+    return updatedOutage
   })
 
   return result
-
-
-
-
 }
 
-
-
-const cancelOutage = async (outageId: string) => {
+const cancelOutage = async (
+  userId: string,
+  outageId: string
+) => {
   const outage = await prisma.outage.findFirst({
     where: {
       id: outageId,
@@ -391,6 +421,16 @@ const cancelOutage = async (outageId: string) => {
         },
       })
     }
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "CANCEL_OUTAGE",
+        entityType: "OUTAGE",
+        entityId: outageId,
+      },
+    })
 
     return updatedOutage
   })

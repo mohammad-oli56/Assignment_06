@@ -16,6 +16,7 @@ import { PaymentRouter } from './module/CUSTOMER/Payment/payment.router';
 import { SchedulesRouter } from './module/CUSTOMER/Schedule/schedule.router';
 import { NotificationRouter } from './module/CUSTOMER/Notification/notification.router';
 import { powerOperatorSchedul } from './module/POWER_OPERATOR/Schedule/P.schedule.router';
+import { NotificationRouterTECHNICIAN } from './module/TECHNICIAN/Notification/notification.router';
 
 const app :Application = express()
 
@@ -62,6 +63,7 @@ app.use("/api/v1/power-operator/service-requests",ServiceRequestRouterOperator)
 //technician
 app.use("/api/v1/technician/services",AssignedServiceRouter)
 app.use("/api/v1/technician/outages",AssignedOutageRouter)
+app.use("/api/v1/technician/notification",NotificationRouterTECHNICIAN)
 
 
 

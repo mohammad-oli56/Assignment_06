@@ -174,6 +174,7 @@ const getSingleServiceRequest = async (
 
 
 const updateServiceRequestStatus = async (
+  userId: string,
   serviceRequestId: string,
   payload: IUpdateServiceRequestStatusPayload
 ) => {
@@ -202,30 +203,57 @@ const updateServiceRequestStatus = async (
     )
   }
 
-  const result = await prisma.serviceRequest.update({
-    where: {
-      id: serviceRequestId,
-    },
-
-    data: {
-      status: "CONFIRMED",
-    },
-
-    include: {
-      zone: true,
-
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          accountNumber: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedServiceRequest =
+      await tx.serviceRequest.update({
+        where: {
+          id: serviceRequestId,
         },
-      },
 
-      payment: true,
-    },
+        data: {
+          status: "CONFIRMED",
+        },
+
+        include: {
+          zone: true,
+
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              accountNumber: true,
+            },
+          },
+
+          payment: true,
+        },
+      })
+
+    // Customer notification
+    await tx.notification.create({
+      data: {
+        userId: serviceRequest.userId,
+        title: "Service Request Confirmed",
+        message:
+          "Your service request has been confirmed by the Power Operator.",
+        // type: "SERVICE_REQUEST",
+      },
+    })
+
+    // Audit log
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "CONFIRM_SERVICE_REQUEST",
+        entityType: "SERVICE_REQUEST",
+        entityId: serviceRequestId,
+      },
+    })
+
+    return updatedServiceRequest
   })
 
   return result
@@ -234,6 +262,7 @@ const updateServiceRequestStatus = async (
 
 
 const assignTechnician = async (
+  userId: string,
   serviceRequestId: string,
   technicianId: string
 ) => {
@@ -246,9 +275,17 @@ const assignTechnician = async (
       id: serviceRequestId,
       deletedAt: null,
     },
-
     include: {
       payment: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+        },
+      },
+      zone: true,
     },
   })
 
@@ -256,47 +293,48 @@ const assignTechnician = async (
     throw new Error("Service request not found")
   }
 
+  // Only CONFIRMED request can be assigned
   if (serviceRequest.status !== "CONFIRMED") {
     throw new Error(
       "Only CONFIRMED service request can be assigned"
     )
   }
 
+  // Payment must exist
+  if (!serviceRequest.payment) {
+    throw new Error(
+      "Payment is required before assigning a technician"
+    )
+  }
+
+  // Payment must be PAID
+  if (serviceRequest.payment.status !== "PAID") {
+    throw new Error(
+      "Payment must be completed before assigning a technician"
+    )
+  }
+
+  // Store payment amount before transaction
+  const paymentAmount = serviceRequest.payment.amount
+
+  // Prevent multiple technician assignment
   if (serviceRequest.technicianId) {
     throw new Error(
       "A technician is already assigned to this service request"
     )
   }
 
-
-
-//   if (!serviceRequest.payment) {
-//     throw new Error(
-//       "Payment is required before assigning a technician"
-//     )
-//   }
-
-//   if (serviceRequest.payment.status !== "PAID") {
-//     throw new Error(
-//       "Service request must be paid before assigning a technician"
-//     )
-//   }
-
- 
-
+  // Find available technician
   const technician = await prisma.technician.findFirst({
     where: {
       id: technicianId,
-
       status: "AVAILABLE",
-
       user: {
         role: "TECHNICIAN",
         isActive: true,
         deletedAt: null,
       },
     },
-
     include: {
       user: {
         select: {
@@ -310,76 +348,99 @@ const assignTechnician = async (
   })
 
   if (!technician) {
-    throw new Error(
-      "Available technician not found"
-    )
+    throw new Error("Available technician not found")
   }
 
-
-  const result = await prisma.$transaction(
-    async (tx) => {
-      const updatedServiceRequest =
-        await tx.serviceRequest.update({
-          where: {
-            id: serviceRequestId,
-          },
-
-          data: {
-            technicianId: technician.id,
-          },
-
-          include: {
-            zone: true,
-
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
-                accountNumber: true,
-              },
-            },
-
-            technician: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    phone: true,
-                  },
-                },
-              },
-            },
-
-            payment: true,
-          },
-        })
-
-    
-
-      await tx.technician.update({
+  const result = await prisma.$transaction(async (tx) => {
+    // Assign technician
+    const updatedServiceRequest =
+      await tx.serviceRequest.update({
         where: {
-          id: technician.id,
+          id: serviceRequestId,
         },
 
         data: {
-          status: "BUSY",
+          technicianId: technician.id,
+        },
+
+        include: {
+          zone: true,
+
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              accountNumber: true,
+            },
+          },
+
+          technician: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true,
+                },
+              },
+            },
+          },
+
+          payment: true,
         },
       })
 
-      return updatedServiceRequest
-    }
-  )
+    // Technician becomes BUSY
+    await tx.technician.update({
+      where: {
+        id: technician.id,
+      },
+
+      data: {
+        status: "BUSY",
+      },
+    })
+
+    // Technician notification
+    await tx.notification.create({
+      data: {
+        userId: technician.user.id,
+        title: "New Service Request Assigned",
+        message: `New service request assigned.
+
+Service Request ID: ${serviceRequestId}
+Amount: ${paymentAmount}
+Customer: ${serviceRequest.user.name}
+Phone: ${serviceRequest.user.phone ?? "N/A"}
+Zone: ${serviceRequest.zone.name}
+
+Please check the service request details.`,
+      },
+    })
+
+    // Audit log
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "ASSIGN_TECHNICIAN_SERVICE",
+        entityType: "SERVICE_REQUEST",
+        entityId: serviceRequestId,
+      },
+    })
+
+    return updatedServiceRequest
+  })
 
   return result
 }
 
 
-
 const cancelServiceRequest = async (
+  userId: string,
   serviceRequestId: string
 ) => {
   const serviceRequest =
@@ -399,9 +460,9 @@ const cancelServiceRequest = async (
   }
 
   /*
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
   | Already completed/cancelled
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
   */
 
   if (
@@ -414,9 +475,9 @@ const cancelServiceRequest = async (
   }
 
   /*
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
   | Work already started
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
   */
 
   if (serviceRequest.status === "IN_PROGRESS") {
@@ -426,9 +487,9 @@ const cancelServiceRequest = async (
   }
 
   /*
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
   | Paid request
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
   */
 
   if (serviceRequest.payment?.status === "PAID") {
@@ -438,35 +499,51 @@ const cancelServiceRequest = async (
   }
 
   /*
-  |--------------------------------------------------------------------------
-  | Cancel
-  |--------------------------------------------------------------------------
+  |-------------------------------------------------------------------------- 
+  | Cancel + Audit Log
+  |-------------------------------------------------------------------------- 
   */
 
-  const result = await prisma.serviceRequest.update({
-    where: {
-      id: serviceRequestId,
-    },
-
-    data: {
-      status: "CANCELLED",
-    },
-
-    include: {
-      zone: true,
-
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          accountNumber: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedServiceRequest =
+      await tx.serviceRequest.update({
+        where: {
+          id: serviceRequestId,
         },
-      },
 
-      payment: true,
-    },
+        data: {
+          status: "CANCELLED",
+        },
+
+        include: {
+          zone: true,
+
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              accountNumber: true,
+            },
+          },
+
+          payment: true,
+        },
+      })
+
+    // Audit Log
+    await tx.auditLog.create({
+      data: {
+        userId,
+        author_role: "POWER_OPERATOR",
+        action: "CANCEL_SERVICE_REQUEST",
+        entityType: "SERVICE_REQUEST",
+        entityId: serviceRequestId,
+      },
+    })
+
+    return updatedServiceRequest
   })
 
   return result

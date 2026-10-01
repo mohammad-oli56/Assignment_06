@@ -73,9 +73,26 @@ const getSingleOutage = catchAsync(
 
 const assignTechnician = catchAsync(
   async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+
+    if (!id) {
+      throw new Error("Outage ID is required")
+    }
+
+    const { technicianId } = req.body
+
+    if (!technicianId) {
+      throw new Error("Technician ID is required")
+    }
+
     const result = await OutageService.assignTechnician(
-      req.params.id as string,
-      req.body.technicianId
+      req.user.userId,
+      id as string,
+      technicianId
     )
 
     sendResponse(res, {
@@ -91,12 +108,23 @@ const assignTechnician = catchAsync(
 
 const updateOutageStatus = catchAsync(
   async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new Error("User not found")
+    }
 
+    const { id } = req.params
 
-   const result = await OutageService.updateOutageStatus(
-  req.params.id as string,
-  req.body
-)
+    // console.log(id)
+
+    if (!id) {
+      throw new Error("Outage ID is required")
+    }
+
+    const result = await OutageService.updateOutageStatus(
+      req.user.userId,
+      id as string,
+      req.body
+    )
 
     sendResponse(res, {
       statusCode: 200,
@@ -111,11 +139,19 @@ const updateOutageStatus = catchAsync(
 
 const cancelOutage = catchAsync(
   async (req: Request, res: Response) => {
-    
+    if (!req.user) {
+      throw new Error("User not found")
+    }
+
+    const { id } = req.params
+
+    if (!id) {
+      throw new Error("Outage ID is required")
+    }
 
     const result = await OutageService.cancelOutage(
-      req.params.id as string,
-    
+      req.user.userId,
+      id as string
     )
 
     sendResponse(res, {
