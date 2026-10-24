@@ -28,10 +28,10 @@ export interface IRequestUser {
 }
 
 
-export interface IGoogle {
-  idTOken : string
-}
 
+export interface IGoogle {
+  idToken: string;
+}
 
 export interface IForgotpassword{
   email:string

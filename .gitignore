@@ -6,3 +6,5 @@ dist
 .claude
 .windsurf
 /src/module/outage
+.vercel
+.env*

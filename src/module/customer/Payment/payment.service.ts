@@ -238,7 +238,7 @@ const createPaymentInDB = async (
                     payerReference: userDetails.email,
 
                     callbackURL:
-                        `${config.APP_URL}/api/v1/customer/payment/bkash/conform`,
+                        `https://assignment-06-mu.vercel.app/api/v1/customer/payment/bkash/conform`,
 
                     amount: amount.toString(),
 

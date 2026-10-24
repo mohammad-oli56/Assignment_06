@@ -4,8 +4,8 @@ import { sendResponse } from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
 import { ICustomer, IRequestUser } from "./auth.interface";
 
-const registeruser = catchAsync(async (req: Request, res: Response,next:NextFunction) =>{
-      const payload = req.body
+const registeruser = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const payload = req.body
 
     //   console.log(payload)
     const result = await AuthService.registerUser(payload)
@@ -30,7 +30,7 @@ const registeruser = catchAsync(async (req: Request, res: Response,next:NextFunc
         statusCode: 200,
         success: true,
         message: 'user registered successfully',
-        data:null
+        data: null
         //  {
         //     accessToken,
         //     refreshToken,
@@ -39,13 +39,13 @@ const registeruser = catchAsync(async (req: Request, res: Response,next:NextFunc
     })
 })
 
-const verifyuseraccout = catchAsync(async (req: Request, res: Response) =>{
+const verifyuseraccout = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
 
     const result = await AuthService.verifyuseraccout(payload)
 
 
-    const { accessToken, refreshToken, createdUser} = result
+    const { accessToken, refreshToken, createdUser } = result
 
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
@@ -65,42 +65,56 @@ const verifyuseraccout = catchAsync(async (req: Request, res: Response) =>{
         success: true,
         message: 'user registered successfully',
         data:
-         {
+        {
             accessToken,
             refreshToken,
-           createdUser
+            createdUser
         },
     })
 })
 
+
+
+
+
+
 const loginUser = catchAsync(async (req: Request, res: Response) => {
-    const payload = req.body
-    const result = await AuthService.loginUser(payload)
-    const { accessToken, refreshToken } = result
+    const payload = req.body;
+
+    const result = await AuthService.loginUser(payload);
+    const { accessToken, refreshToken } = result;
 
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
-    })
+        path: "/",
+        maxAge: 1000 * 60 * 60 * 24, // 1 day
+    });
+
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    })
+        path: "/",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    });
 
     sendResponse(res, {
-        statusCode:200,
+        statusCode: 200,
         success: true,
-        message: 'User logged in successfully',
+        message: "User logged in successfully",
         data: {
             accessToken,
-            refreshToken
+            refreshToken,
         },
-    })
-})
+    });
+});
+
+
+
+
+
 
 const getMe = catchAsync(async (req: Request, res: Response) => {
     const user = req.user as unknown as IRequestUser
@@ -140,7 +154,7 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
     })
 
     sendResponse(res, {
-        statusCode:200,
+        statusCode: 200,
         success: true,
         message: 'New tokens generated successfully',
         data: {
@@ -153,25 +167,28 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 const googlelogin = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
 
-  const result = await AuthService.googlelogin(payload)
+    const result = await AuthService.googlelogin(payload)
 
-     const { accessToken, refreshToken } = result
+    const { accessToken, refreshToken } = result
 
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 // 24 hour or 1 day
-    })
+        path: "/",
+        maxAge: 1000 * 60 * 60 * 24,
+    });
+
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
-    })
+        path: "/",
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+    });
 
     sendResponse(res, {
-        statusCode:200,
+        statusCode: 200,
         success: true,
         message: 'User logged in successfully',
         data: {
@@ -184,12 +201,12 @@ const googlelogin = catchAsync(async (req: Request, res: Response) => {
 
 const forgotpassword = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
-     await AuthService.forgotPassword(payload)
-   
+    await AuthService.forgotPassword(payload)
+
 
 
     sendResponse(res, {
-        statusCode:200,
+        statusCode: 200,
         success: true,
         message: 'otp send ',
         data: null
@@ -200,12 +217,12 @@ const forgotpassword = catchAsync(async (req: Request, res: Response) => {
 
 const resetpassword = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
-     await AuthService.resetPassword(payload)
-   
+    await AuthService.resetPassword(payload)
+
 
 
     sendResponse(res, {
-        statusCode:200,
+        statusCode: 200,
         success: true,
         message: 'password change successfully',
         data: null
@@ -214,20 +231,20 @@ const resetpassword = catchAsync(async (req: Request, res: Response) => {
 
 
 
-const updateProfile = catchAsync(async (req: Request, res: Response) => { 
+const updateProfile = catchAsync(async (req: Request, res: Response) => {
     const payload = req.body
 
 
-    if(!req.user){
+    if (!req.user) {
         throw new Error("User not found")
     }
 
-    const result = await AuthService.updateProfile(req.user,payload)
-   
+    const result = await AuthService.updateProfile(req.user, payload)
+
 
 
     sendResponse(res, {
-        statusCode:200,
+        statusCode: 200,
         success: true,
         message: 'Update profile successfully',
         data: result
@@ -236,29 +253,29 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
 
 const uploadImage = catchAsync(
-  async (req: Request, res: Response) => {
-    // console.log(req.file)
+    async (req: Request, res: Response) => {
+        // console.log(req.file)
 
-    if (!req.user) {
-      throw new Error("User not found")
+        if (!req.user) {
+            throw new Error("User not found")
+        }
+
+        if (!req.file) {
+            throw new Error("Profile image is required")
+        }
+
+        const result = await AuthService.uploadimage(
+            req.user,
+            req.file.buffer
+        )
+
+        sendResponse(res, {
+            statusCode: 200,
+            success: true,
+            message: "Profile photo uploaded successfully",
+            data: result,
+        })
     }
-
-    if (!req.file) {
-      throw new Error("Profile image is required")
-    }
-
-    const result = await AuthService.uploadimage(
-      req.user,
-      req.file.buffer
-    )
-
-    sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: "Profile photo uploaded successfully",
-      data: result,
-    })
-  }
 )
 
 

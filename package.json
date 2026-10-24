@@ -6,7 +6,7 @@
   "author": "",
   "type": "module",
   "main": "index.js",
-  "scripts": {
+  "scripts":  {
     "dev": "tsx watch src/server.ts",
     "build": "tsup",
     "start": "node dist/server.js",
@@ -40,6 +40,7 @@
     "nodemailer": "^10.0.10",
     "pg": "^8.23.0",
     "redis": "^6.2.1",
+    "tsup": "^8.5.1",
     "zod": "^4.6.5"
   }
 }

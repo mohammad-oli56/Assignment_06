@@ -148,7 +148,7 @@ const verifyuseraccout = async (payload: IverifyUserPayload) => {
     // JWT payload
     const jwtPayload = {
         userId: createdUser.id,
-        name: createdUser.name,
+       
         email: createdUser.email,
         role: createdUser.role,
     };
@@ -208,7 +208,7 @@ const loginUser = async (payload: ILoginUserPayload) => {
 
     const jwtPayload = {
         userId: user.id,
-        name: user.name,
+       
         email: user.email,
         role: user.role
     }
@@ -292,143 +292,138 @@ const refreshToken = async (token: string) => {
 }
 
 
+
 const googlelogin = async (payload: IGoogle) => {
+  let googleidTokenPayload: TokenPayload | null = null;
 
-    let googleidTokenPayload: TokenPayload | null | undefined = null;
+  // 1. Verify Google ID token
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: payload.idToken,
+      audience: config.GOOGLE_CLIENT_ID,
+    });
 
-    try {
-        const ticket = await googleClient.verifyIdToken({
-            idToken: payload.idTOken,
-            audience: config.GOOGLE_CLIENT_ID
-        })
-        googleidTokenPayload = ticket.getPayload()
+    googleidTokenPayload = ticket.getPayload() ?? null;
+  } catch (error) {
+    console.error("Google ID token verification error:", error);
+    throw new Error("Invalid or expired Google ID token");
+  }
 
+  if (!googleidTokenPayload) {
+    throw new Error("Invalid or expired Google ID token");
+  }
 
-    } catch (error) {
-        console.log("google id token verification error", error)
-        throw new Error("invalid or expired google id token")
-    }
+  if (!googleidTokenPayload.email) {
+    throw new Error("Google account email not found");
+  }
 
+  if (!googleidTokenPayload.name) {
+    throw new Error("Google account name not found");
+  }
 
-    if (!googleidTokenPayload) {
-        throw new Error("invalid or expired google id token")
-    }
+  const email = googleidTokenPayload.email;
+  const googleid = googleidTokenPayload.sub;
 
-    if (!googleidTokenPayload.name) {
-        throw new Error("email not found")
-    }
+  // 2. Check whether this Google account is already linked
+  let user = await prisma.user.findFirst({
+    where: {
+      email,
+      role: UserRole.CUSTOMER,
+      googleid,
+    },
+  });
 
-    if (!googleidTokenPayload.email) {
-        throw new Error("email not found")
-    }
+  if (!user) {
+    // 3. Check whether a credential account exists with this email
+    const credentialUser = await prisma.user.findFirst({
+      where: {
+        email,
+        role: UserRole.CUSTOMER,
+        provider: authProvider.CREDENTIAL,
+      },
+    });
 
+    if (credentialUser) {
+      // 4. Validate the existing account
+      if (credentialUser.emailVerified === false) {
+        throw new Error("Email not verified");
+      }
 
-    const accountNumber = `ACC-${crypto.randomUUID()}`
+      if (credentialUser.status === UserStatus.BLOCKED) {
+        throw new Error("User is blocked");
+      }
 
-    const ifUserExistWithGoogleAuth = await prisma.user.findUnique({
+      if (credentialUser.status === UserStatus.DELETED) {
+        throw new Error("User has been deleted");
+      }
+
+      // 5. Link the existing account to Google
+      user = await prisma.user.update({
         where: {
-            email: googleidTokenPayload.email,
-            role: UserRole.CUSTOMER,
-            googleid: googleidTokenPayload.sub
-        }
-    })
+          id: credentialUser.id,
+        },
+        data: {
+          googleid,
+          provider: authProvider.GOOGLE,
+        },
+      });
+    } else {
+      // 6. Create a new Google account
+      const accountNumber = `ACC-${crypto.randomUUID()}`;
 
-    let user = ifUserExistWithGoogleAuth
-
-
-    if (!ifUserExistWithGoogleAuth) {
-
-
-        const ifuserExistwithCredentia = await prisma.user.findUnique({
-            where: {
-                email: googleidTokenPayload.email,
-                role: UserRole.CUSTOMER,
-                provider: authProvider.CREDENTIAL
-            }
-        })
-
-        if (ifuserExistwithCredentia) {
-
-
-            if (ifuserExistwithCredentia.emailVerified === false) {
-                throw new Error("email not verified")
-            }
-
-            if (ifuserExistwithCredentia.status === UserStatus.BLOCKED) {
-                throw new Error("user block")
-            }
-
-            if (ifuserExistwithCredentia.status === UserStatus.DELETED) {
-                throw new Error("user is deleted")
-            }
-
-
-            user = await prisma.user.update({
-                where: {
-                    id: ifuserExistwithCredentia.id
-                },
-                data: {
-                    googleid: googleidTokenPayload.sub
-                }
-            })
-        } else {
-            user = await prisma.user.create({
-                data: {
-                    name: googleidTokenPayload.name,
-                    email: googleidTokenPayload.email,
-                    role: UserRole.CUSTOMER,
-                    googleid: googleidTokenPayload.sub,
-                    provider: authProvider.GOOGLE,
-                    accountNumber,
-                    emailVerified: true
-                }
-            })
-        }
-
-
+      user = await prisma.user.create({
+        data: {
+          name: googleidTokenPayload.name,
+          email,
+          role: UserRole.CUSTOMER,
+          googleid,
+          provider: authProvider.GOOGLE,
+          accountNumber,
+          emailVerified: true,
+        },
+      });
     }
+  }
 
+  // 7. Validate the final user
+  if (!user) {
+    throw new Error("User not found");
+  }
 
-    if (!user) {
-        throw new Error("user not fount")
-    }
+  if (user.status === UserStatus.BLOCKED) {
+    throw new Error("User is blocked");
+  }
 
+  if (user.status === UserStatus.DELETED) {
+    throw new Error("User has been deleted");
+  }
 
-    if (user.status === UserStatus.BLOCKED) {
-        throw new Error("user block")
-    }
+  // 8. Generate JWT tokens
+  const jwtPayload = {
+    userId: user.id,
+   
+    email: user.email,
+    role: user.role,
+  };
 
-    if (user.status === UserStatus.DELETED) {
-        throw new Error("user is deleted")
-    }
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.JWT_ACCESS_SECRET,
+    config.JWT_EXPIRES_IN as SignOptions
+  );
 
+  const refreshToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_refresh_secret,
+    config.jwt_refresh_expires_in as SignOptions
+  );
 
-    const jwtPayload = {
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-    }
+  return {
+    accessToken,
+    refreshToken,
+  };
+};
 
-    const accessToken = jwtUtils.createToken(
-        jwtPayload,
-        config.JWT_ACCESS_SECRET,
-        config.JWT_EXPIRES_IN as SignOptions
-    );
-
-    const refreshToken = jwtUtils.createToken(
-        jwtPayload,
-        config.jwt_refresh_secret,
-        config.jwt_refresh_expires_in as SignOptions
-    );
-
-    return {
-        accessToken,
-        refreshToken
-    }
-
-
-}
 
 
 const forgotPassword = async (payload: IForgotpassword) => {
@@ -663,6 +658,11 @@ const updateProfile = async (
 
     return result
 }
+
+
+
+
+
 
 
 const uploadimage = async (

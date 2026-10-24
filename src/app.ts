@@ -20,10 +20,12 @@ import { NotificationRouterTECHNICIAN } from './module/TECHNICIAN/Notification/n
 
 const app :Application = express()
 
-app.use(cors({
-    origin : config.APP_URL,
-    credentials : true
-}))
+app.use(
+  cors({
+    origin: config.APP_URL,
+    credentials: true,
+  })
+);
 app.use(express.json())
 app.use(express.urlencoded({
     extended:true
